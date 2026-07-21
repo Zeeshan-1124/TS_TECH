@@ -142,7 +142,7 @@ export function Navbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className={`absolute right-0 top-full mt-2 w-80 rounded-xl shadow-2xl overflow-hidden ${
+                      className={`fixed left-4 right-4 top-24 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-80 rounded-xl shadow-2xl overflow-hidden z-50 ${
                         theme === 'dark' ? 'bg-dark-500 border border-white/10' : 'bg-white border border-gray-200'
                       }`}
                     >

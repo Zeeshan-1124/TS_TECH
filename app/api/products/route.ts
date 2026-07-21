@@ -29,6 +29,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ brands: uniqueBrands });
     }
 
+    const ids = searchParams.get('ids');
+    if (ids) {
+      const idArray = ids.split(',').filter(Boolean);
+      if (idArray.length === 0) return NextResponse.json({ products: [] });
+      const products = await prisma.product.findMany({
+        where: { id: { in: idArray }, isActive: true },
+      });
+      return NextResponse.json({ products });
+    }
+
     const where: Record<string, unknown> = { isActive: true };
 
     if (featured === 'true') where.isFeatured = true;

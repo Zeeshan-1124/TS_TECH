@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, MessageSquare, ShoppingBag, TrendingUp, Plus, ArrowRight, Clock, CircleCheck as CheckCircle, Truck, Circle as XCircle, X, MapPin, CreditCard, Phone, Flame, Trash2 } from 'lucide-react';
+import { Package, MessageSquare, ShoppingBag, TrendingUp, Plus, ArrowRight, Clock, CircleCheck as CheckCircle, Truck, Circle as XCircle, X, MapPin, CreditCard, Phone, Flame, Trash2, ChevronDown } from 'lucide-react';
 import type { Product } from '@/lib/database.types';
 import { toast } from 'sonner';
 
@@ -56,6 +56,7 @@ export default function AdminDashboardPage() {
   const [dailyDealsProducts, setDailyDealsProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [showDealManager, setShowDealManager] = useState(false);
+  const [dealsExpanded, setDealsExpanded] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -155,13 +156,19 @@ export default function AdminDashboardPage() {
 
       {/* Daily Deals Manager */}
       <div className="card-surface rounded-2xl border border-white/5 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-white flex items-center gap-2">
-            <Flame size={16} className="text-gold-500" /> Daily Deals Banner
-          </h2>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setDealsExpanded((p) => !p)}
+            className="flex items-center gap-2 text-base font-semibold text-white flex-1 min-w-0"
+          >
+            <Flame size={16} className="text-gold-500 flex-shrink-0" />
+            <span className="truncate">Daily Deals Banner</span>
+            <span className="text-xs text-silver-500 font-normal flex-shrink-0">({dailyDealsProducts.length})</span>
+            <ChevronDown size={14} className={`text-silver-500 transition-transform flex-shrink-0 ${dealsExpanded ? 'rotate-180' : ''}`} />
+          </button>
           <button
             onClick={() => setShowDealManager((p) => !p)}
-            className="text-xs text-gold-500 hover:text-gold-400 transition-colors"
+            className="text-xs text-gold-500 hover:text-gold-400 transition-colors flex-shrink-0"
           >
             {showDealManager ? 'Done' : 'Manage'}
           </button>
@@ -171,24 +178,34 @@ export default function AdminDashboardPage() {
           <p className="text-silver-500 text-sm text-center py-4">No daily deals selected. Click &quot;Manage&quot; to add products to the daily deals banner.</p>
         )}
 
-        {dailyDealsProducts.length > 0 && !showDealManager && (
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {dailyDealsProducts.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 bg-white/3 border border-white/5 rounded-lg px-3 py-2 flex-shrink-0">
-                <div className="w-8 h-8 rounded-lg overflow-hidden bg-dark-300 flex-shrink-0">
-                  {(p.images as string[])?.[0] && <img src={(p.images as string[])[0]} alt={p.name} className="w-full h-full object-cover" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs text-white truncate max-w-32">{p.name}</div>
-                  <div className="text-xs text-gold-400">₹{p.price.toLocaleString('en-IN')}</div>
-                </div>
+        <AnimatePresence>
+          {dailyDealsProducts.length > 0 && !showDealManager && dealsExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-4">
+                {dailyDealsProducts.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 bg-white/3 border border-white/5 rounded-lg px-3 py-2 min-w-0">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-dark-300 flex-shrink-0">
+                      {(p.images as string[])?.[0] && <img src={(p.images as string[])[0]} alt={p.name} className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-white truncate">{p.name}</div>
+                      <div className="text-xs text-gold-400">₹{p.price.toLocaleString('en-IN')}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {showDealManager && (
-          <div className="space-y-2 max-h-80 overflow-y-auto">
+          <div className="space-y-2 max-h-80 overflow-y-auto mt-4">
             {allProducts.map((p) => (
               <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg bg-white/3 border border-white/5">
                 <div className="w-9 h-9 rounded-lg overflow-hidden bg-dark-300 flex-shrink-0">
@@ -200,7 +217,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   onClick={() => toggleDailyDeal(p)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
                     p.isDailyDeal
                       ? 'bg-gold-500/15 text-gold-400 border border-gold-500/30'
                       : 'bg-white/5 text-silver-400 border border-white/10 hover:border-gold-500/20'

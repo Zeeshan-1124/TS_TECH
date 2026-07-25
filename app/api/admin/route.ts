@@ -43,3 +43,20 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user?.isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+    const { orderNumber } = await req.json();
+    const order = await prisma.order.findFirst({ where: { orderNumber }, select: { id: true, status: true } });
+    if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+
+    await prisma.order.delete({ where: { id: order.id } });
+
+    return NextResponse.json({ success: true, orderNumber });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal server error' }, { status: 500 });
+  }
+}

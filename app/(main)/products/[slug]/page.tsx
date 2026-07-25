@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ShoppingCart, Shield, Truck, RotateCcw,
-  Star, Plus, Minus, Heart, ChevronRight, ChevronDown, Package,
+  Star, Plus, Minus, Heart, ChevronRight, ChevronDown, ChevronLeft, Package,
   Zap, Box, Check, Pencil, Trash2, Smartphone,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -229,7 +229,7 @@ export default function ProductDetailPage() {
               key={activeImage}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="relative aspect-square rounded-2xl overflow-hidden bg-dark-300 mb-3 border border-white/5"
+              className="relative aspect-square rounded-2xl overflow-hidden bg-dark-300 mb-3 border border-white/5 group"
             >
               {currentImages[activeImage] ? (
                 <img src={currentImages[activeImage]} alt={product.name} className="w-full h-full object-cover" />
@@ -243,6 +243,27 @@ export default function ProductDetailPage() {
                 <div className="absolute top-4 right-4 flex items-center gap-1 bg-green-500/20 backdrop-blur-sm text-green-400 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-green-500/30">
                   <Zap size={10} /> Fast Delivery
                 </div>
+              )}
+              {currentImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImage((i) => (i - 1 + currentImages.length) % currentImages.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-black/70 hover:border-gold-500/40 transition-all"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    onClick={() => setActiveImage((i) => (i + 1) % currentImages.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-black/70 hover:border-gold-500/40 transition-all"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-white/10">
+                    {activeImage + 1} / {currentImages.length}
+                  </div>
+                </>
               )}
             </motion.div>
 

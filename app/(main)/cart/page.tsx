@@ -12,6 +12,7 @@ import {
     Package,
     Tag,
     Smartphone,
+    Palette,
 } from "lucide-react";
 import { useCart, cartItemKey } from "@/context/CartContext";
 import { toast } from "sonner";
@@ -97,9 +98,9 @@ export default function CartPage() {
                         {/* Cart Items */}
                         <div className='lg:col-span-2 space-y-3'>
                             <AnimatePresence mode='popLayout'>
-                                {items.map(({ product, quantity, caseBrand, caseModel }) => (
+                                {items.map(({ product, quantity, caseBrand, caseModel, selectedColor }) => (
                                     <motion.div
-                                        key={cartItemKey(product.id, caseBrand, caseModel)}
+                                        key={cartItemKey(product.id, caseBrand, caseModel, selectedColor)}
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -163,6 +164,12 @@ export default function CartPage() {
                                                             {caseBrand} · {caseModel}
                                                         </div>
                                                     )}
+                                                    {selectedColor && (
+                                                        <div className='mt-1 inline-flex items-center gap-1.5 text-[11px] text-silver-300 bg-white/5 border border-white/10 rounded-md px-2 py-0.5'>
+                                                            <Palette size={10} />
+                                                            {selectedColor}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <button
                                                     onClick={() =>
@@ -170,6 +177,7 @@ export default function CartPage() {
                                                             product.id,
                                                             caseBrand,
                                                             caseModel,
+                                                            selectedColor,
                                                         )
                                                     }
                                                     className='p-1.5 text-silver-600 hover:text-red-400 transition-colors flex-shrink-0'
@@ -189,6 +197,7 @@ export default function CartPage() {
                                                                 quantity - 1,
                                                                 caseBrand,
                                                                 caseModel,
+                                                                selectedColor,
                                                             )
                                                         }
                                                         className='w-6 h-6 flex items-center justify-center text-silver-400 hover:text-white transition-colors'
@@ -205,6 +214,7 @@ export default function CartPage() {
                                                                 quantity + 1,
                                                                 caseBrand,
                                                                 caseModel,
+                                                                selectedColor,
                                                             )
                                                         }
                                                         className='w-6 h-6 flex items-center justify-center text-silver-400 hover:text-white transition-colors'

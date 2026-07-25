@@ -9,6 +9,7 @@ export interface LocalCartItem {
   quantity: number;
   caseBrand?: string | null;
   caseModel?: string | null;
+  selectedColor?: string | null;
 }
 
 interface CartContextValue {
@@ -16,14 +17,16 @@ interface CartContextValue {
   count: number;
   total: number;
   loading: boolean;
-  addToCart: (product: Product, quantity?: number, options?: { caseBrand?: string; caseModel?: string }) => Promise<void>;
-  removeFromCart: (productId: string, caseBrand?: string | null, caseModel?: string | null) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null) => Promise<void>;
+  addToCart: (product: Product, quantity?: number, options?: { caseBrand?: string; caseModel?: string; selectedColor?: string }) => Promise<void>;
+  removeFromCart: (productId: string, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => Promise<void>;
+  updateItemColor: (productId: string, color: string, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => Promise<void>;
   clearCart: () => Promise<void>;
 }
 
-export function cartItemKey(productId: string, caseBrand?: string | null, caseModel?: string | null): string {
-  return caseBrand || caseModel ? `${productId}__${caseBrand ?? ''}__${caseModel ?? ''}` : productId;
+export function cartItemKey(productId: string, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null): string {
+  const suffix = caseBrand || caseModel || selectedColor;
+  return suffix ? `${productId}__${caseBrand ?? ''}__${caseModel ?? ''}__${selectedColor ?? ''}` : productId;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -75,15 +78,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchServerCart]);
 
-  const addToCart = async (product: Product, quantity = 1, options?: { caseBrand?: string; caseModel?: string }) => {
+  const addToCart = async (product: Product, quantity = 1, options?: { caseBrand?: string; caseModel?: string; selectedColor?: string }) => {
     const caseBrand = options?.caseBrand ?? null;
     const caseModel = options?.caseModel ?? null;
-    const key = cartItemKey(product.id, caseBrand, caseModel);
+    const selectedColor = options?.selectedColor ?? null;
+    const key = cartItemKey(product.id, caseBrand, caseModel, selectedColor);
     setItems((prev) => {
-      const existing = prev.find((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key);
+      const existing = prev.find((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) === key);
       const next = existing
-        ? prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key ? { ...i, quantity: i.quantity + quantity } : i)
-        : [...prev, { product, quantity, caseBrand, caseModel }];
+        ? prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) === key ? { ...i, quantity: i.quantity + quantity } : i)
+        : [...prev, { product, quantity, caseBrand, caseModel, selectedColor }];
       saveLocal(next);
       return next;
     });
@@ -97,10 +101,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeFromCart = async (productId: string, caseBrand?: string | null, caseModel?: string | null) => {
-    const key = cartItemKey(productId, caseBrand, caseModel);
+  const removeFromCart = async (productId: string, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => {
+    const key = cartItemKey(productId, caseBrand, caseModel, selectedColor);
     setItems((prev) => {
-      const next = prev.filter((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) !== key);
+      const next = prev.filter((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) !== key);
       saveLocal(next);
       return next;
     });
@@ -109,11 +113,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateQuantity = async (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null) => {
-    if (quantity <= 0) { await removeFromCart(productId, caseBrand, caseModel); return; }
-    const key = cartItemKey(productId, caseBrand, caseModel);
+  const updateQuantity = async (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => {
+    if (quantity <= 0) { await removeFromCart(productId, caseBrand, caseModel, selectedColor); return; }
+    const key = cartItemKey(productId, caseBrand, caseModel, selectedColor);
     setItems((prev) => {
-      const next = prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key ? { ...i, quantity } : i);
+      const next = prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) === key ? { ...i, quantity } : i);
       saveLocal(next);
       return next;
     });
@@ -124,6 +128,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ productId, quantity }),
       });
     }
+  };
+
+  const updateItemColor = async (productId: string, color: string, caseBrand?: string | null, caseModel?: string | null, selectedColor?: string | null) => {
+    const oldKey = cartItemKey(productId, caseBrand, caseModel, selectedColor);
+    setItems((prev) => {
+      const target = prev.find((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) === oldKey);
+      if (!target) return prev;
+      const newColor = color || null;
+      const newKey = cartItemKey(productId, target.caseBrand, target.caseModel, newColor);
+      const existingNew = prev.find((i) => i !== target && cartItemKey(i.product.id, i.caseBrand, i.caseModel, i.selectedColor) === newKey);
+      let next: LocalCartItem[];
+      if (existingNew) {
+        next = prev
+          .filter((i) => i !== target && i !== existingNew)
+          .concat({ ...existingNew, quantity: existingNew.quantity + target.quantity });
+      } else {
+        next = prev.map((i) => i === target ? { ...i, selectedColor: newColor } : i);
+      }
+      saveLocal(next);
+      return next;
+    });
   };
 
   const clearCart = async () => {
@@ -138,7 +163,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, count, total, loading, addToCart, removeFromCart, updateQuantity, clearCart }}>
+    <CartContext.Provider value={{ items, count, total, loading, addToCart, removeFromCart, updateQuantity, updateItemColor, clearCart }}>
       {children}
     </CartContext.Provider>
   );

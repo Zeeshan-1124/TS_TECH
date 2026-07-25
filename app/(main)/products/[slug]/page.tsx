@@ -87,9 +87,10 @@ export default function ProductDetailPage() {
     if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
     if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setAdding(true);
-    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel });
+    const chosenColor = colorVariants.length > 0 ? colorVariants[activeColor]?.color : undefined;
+    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel, selectedColor: chosenColor });
     setAdding(false);
-    toast.success('Added to cart!', { description: `${quantity} × ${product.name}${selectedCaseModel ? ` (${selectedCaseBrand} ${selectedCaseModel})` : ''}` });
+    toast.success('Added to cart!', { description: `${quantity} × ${product.name}${selectedCaseModel ? ` (${selectedCaseBrand} ${selectedCaseModel})` : ''}${chosenColor ? ` — ${chosenColor}` : ''}` });
   };
 
   const handleBuyNow = async () => {
@@ -97,7 +98,8 @@ export default function ProductDetailPage() {
     if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
     if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setBuying(true);
-    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel });
+    const chosenColor = colorVariants.length > 0 ? colorVariants[activeColor]?.color : undefined;
+    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel, selectedColor: chosenColor });
     setBuying(false);
     router.push('/checkout');
   };

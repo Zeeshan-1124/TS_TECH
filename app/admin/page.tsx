@@ -18,6 +18,10 @@ interface OrderDetails {
   id: string;
   orderNumber: string;
   total: number;
+  subtotal: number;
+  shippingFee: number;
+  loyaltyDiscount: number;
+  pointsRedeemed: number;
   status: string;
   createdAt: string;
   shippingFullName: string;
@@ -344,19 +348,47 @@ export default function AdminDashboardPage() {
                   <div className="text-xs text-silver-500 mb-2">Items Ordered</div>
                   <div className="space-y-2">
                     {selectedOrder.orderItems.map((item) => (
-                      <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-white/3">
-                        <div className="w-10 h-10 rounded-lg bg-dark-300 overflow-hidden flex-shrink-0">
+                      <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white/3">
+                        <div className="w-11 h-11 rounded-lg bg-dark-300 overflow-hidden flex-shrink-0">
                           {item.productImage && <img src={item.productImage} alt={item.productName} className="w-full h-full object-cover" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-white truncate">{item.productName}</div>
-                          <div className="text-xs text-silver-500">Qty: {item.quantity} × ₹{item.unitPrice.toLocaleString('en-IN')}</div>
+                          <div className="text-sm text-white break-words">{item.productName}</div>
+                          <div className="text-xs text-silver-500 mt-0.5">Qty: {item.quantity} × ₹{item.unitPrice.toLocaleString('en-IN')}</div>
                         </div>
-                        <div className="text-sm font-semibold text-gold-400">
+                        <div className="text-sm font-semibold text-gold-400 whitespace-nowrap">
                           ₹{(item.quantity * item.unitPrice).toLocaleString('en-IN')}
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
+                <div className="space-y-1.5 bg-white/3 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-silver-500">Subtotal</span>
+                    <span className="text-white">₹{selectedOrder.subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-silver-500">Shipping</span>
+                    <span className="text-white">₹{selectedOrder.shippingFee.toLocaleString('en-IN')}</span>
+                  </div>
+                  {selectedOrder.loyaltyDiscount > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-silver-500">Loyalty Discount</span>
+                      <span className="text-green-400">−₹{selectedOrder.loyaltyDiscount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {selectedOrder.pointsRedeemed > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-silver-500">Points Redeemed</span>
+                      <span className="text-gold-400">{selectedOrder.pointsRedeemed} pts</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
+                    <span className="text-sm font-semibold text-white">Order Total</span>
+                    <span className="text-base font-bold text-gold-400">₹{selectedOrder.total.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -394,12 +426,6 @@ export default function AdminDashboardPage() {
                     <div className="bg-white/3 rounded-lg p-3 text-sm text-silver-300">{selectedOrder.notes}</div>
                   </div>
                 )}
-
-                {/* Total */}
-                <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                  <div className="text-sm font-semibold text-white">Order Total</div>
-                  <div className="text-lg font-bold text-gold-400">₹{selectedOrder.total.toLocaleString('en-IN')}</div>
-                </div>
               </div>
             </motion.div>
           </motion.div>

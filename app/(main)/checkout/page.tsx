@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Package, Check, ChevronRight, CreditCard, Truck, MapPin, Coins, Sparkles } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { ArrowLeft, Package, Check, ChevronRight, CreditCard, Truck, MapPin, Coins, Sparkles, Minus, Plus, Trash2, Palette, Smartphone } from 'lucide-react';
+import { useCart, cartItemKey } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'sonner';
@@ -45,7 +45,7 @@ function getDeliveryCharge(subtotal: number): { charge: number; label: string } 
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, updateQuantity, removeFromCart, updateItemColor } = useCart();
   const { user } = useAuth();
   const { theme } = useTheme();
   const [step, setStep] = useState<Step>('address');
@@ -148,10 +148,11 @@ export default function CheckoutPage() {
           paymentMethod,
           notes: address.notes || null,
           items: items.map((item) => {
+            const colorSuffix = item.selectedColor ? ` — ${item.selectedColor}` : '';
             const caseSuffix = item.caseBrand && item.caseModel ? ` — ${item.caseBrand} ${item.caseModel}` : '';
             return {
               productId: item.product.id,
-              productName: `${item.product.name}${caseSuffix}`,
+              productName: `${item.product.name}${caseSuffix}${colorSuffix}`,
               productImage: (item.product.images as string[])?.[0] ?? null,
               quantity: item.quantity,
               unitPrice: item.product.price,
@@ -365,7 +366,7 @@ export default function CheckoutPage() {
                   {/* Items */}
                   <div className="space-y-2">
                     {items.map((item) => (
-                      <div key={item.product.id} className={`flex items-center gap-3 p-2 rounded-lg ${innerBg}`}>
+                      <div key={cartItemKey(item.product.id, item.caseBrand, item.caseModel, item.selectedColor)} className={`flex items-center gap-3 p-2 rounded-lg ${innerBg}`}>
                         <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
                           {(item.product.images as string[])?.[0] && (
                             <img src={(item.product.images as string[])[0]} alt={item.product.name} className="w-full h-full object-cover" />
@@ -373,6 +374,16 @@ export default function CheckoutPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className={`text-sm ${tc} truncate`}>{item.product.name}</div>
+                          {item.caseBrand && item.caseModel && (
+                            <div className="text-[10px] text-gold-400 flex items-center gap-1 mt-0.5">
+                              <Smartphone size={9} /> {item.caseBrand} {item.caseModel}
+                            </div>
+                          )}
+                          {item.selectedColor && (
+                            <div className={`text-[10px] ${mc} flex items-center gap-1 ${item.caseBrand ? '' : 'mt-0.5'}`}>
+                              <Palette size={9} /> {item.selectedColor}
+                            </div>
+                          )}
                           <div className={`text-xs ${mc}`}>Qty: {item.quantity} × ₹{item.product.price.toLocaleString('en-IN')}</div>
                         </div>
                         <div className="text-sm font-semibold text-gold-400">₹{(item.product.price * item.quantity).toLocaleString('en-IN')}</div>
@@ -399,21 +410,77 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className={`card-surface rounded-2xl border ${cardBorder} p-5 sticky top-24`}>
               <h3 className={`text-sm font-semibold ${tc} mb-4`}>Order Summary</h3>
-              <div className="space-y-2 mb-4">
-                {items.map((item) => (
-                  <div key={item.product.id} className="flex items-center gap-2 text-xs">
-                    <div className={`w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
-                      {(item.product.images as string[])?.[0] && (
-                        <img src={(item.product.images as string[])[0]} alt="" className="w-full h-full object-cover" />
+              <div className="space-y-3 mb-4">
+                {items.map((item) => {
+                  const variants = ((item.product.colorVariants as { color: string; images: string[] }[] | null) ?? []).filter((v) => v.color);
+                  return (
+                    <div key={cartItemKey(item.product.id, item.caseBrand, item.caseModel, item.selectedColor)} className={`rounded-xl p-2.5 ${innerBg}`}>
+                      <div className="flex items-start gap-2">
+                        <div className={`w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
+                          {(item.product.images as string[])?.[0] && (
+                            <img src={(item.product.images as string[])[0]} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`${tc} truncate text-xs font-medium`}>{item.product.name}</div>
+                          {item.caseBrand && item.caseModel && (
+                            <div className="text-[10px] text-gold-400 flex items-center gap-1 mt-0.5">
+                              <Smartphone size={9} /> {item.caseBrand} {item.caseModel}
+                            </div>
+                          )}
+                          {item.selectedColor && (
+                            <div className="text-[10px] text-silver-400 flex items-center gap-1 mt-0.5">
+                              <Palette size={9} /> {item.selectedColor}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between mt-1.5">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.caseBrand, item.caseModel, item.selectedColor)}
+                                className={`w-5 h-5 rounded-md flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'} ${tc} transition-colors`}
+                              >
+                                <Minus size={10} />
+                              </button>
+                              <span className={`w-6 text-center text-xs font-semibold ${tc}`}>{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.caseBrand, item.caseModel, item.selectedColor)}
+                                className={`w-5 h-5 rounded-md flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200 hover:bg-gray-300'} ${tc} transition-colors`}
+                              >
+                                <Plus size={10} />
+                              </button>
+                              <button
+                                onClick={() => removeFromCart(item.product.id, item.caseBrand, item.caseModel, item.selectedColor)}
+                                className={`ml-1 w-5 h-5 rounded-md flex items-center justify-center text-red-400/70 hover:text-red-400 transition-colors`}
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
+                            <div className="text-xs font-semibold text-gold-400">₹{(item.product.price * item.quantity).toLocaleString('en-IN')}</div>
+                          </div>
+                        </div>
+                      </div>
+                      {variants.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/5 flex-wrap">
+                          <span className={`text-[10px] ${mc}`}>Color:</span>
+                          {variants.map((v) => (
+                            <button
+                              key={v.color}
+                              onClick={() => updateItemColor(item.product.id, v.color, item.caseBrand, item.caseModel, item.selectedColor)}
+                              title={v.color}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${
+                                item.selectedColor === v.color
+                                  ? 'bg-gold-500/15 text-gold-400 border border-gold-500/30'
+                                  : `${isDark ? 'bg-white/5 text-silver-400 border border-white/10' : 'bg-gray-100 text-gray-600 border border-gray-200'} hover:border-gold-500/20`
+                              }`}
+                            >
+                              {v.color}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`${sc} truncate`}>{item.product.name}</div>
-                      <div className={mc}>×{item.quantity}</div>
-                    </div>
-                    <div className={sc}>₹{(item.product.price * item.quantity).toLocaleString('en-IN')}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Loyalty Redemption */}

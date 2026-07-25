@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Package, Check, ChevronRight, CreditCard, Truck, MapPin, Coins, Sparkles, Minus, Plus, Trash2, Palette, Smartphone } from 'lucide-react';
+import { ArrowLeft, Package, Check, ChevronRight, CreditCard, Truck, MapPin, Coins, Sparkles, Minus, Plus, Trash2, Palette, Smartphone, X } from 'lucide-react';
 import { useCart, cartItemKey } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -26,8 +26,18 @@ interface AddressForm {
 
 const PAYMENT_METHODS = [
   { id: 'cod', label: 'Cash on Delivery', desc: 'Pay when you receive your order', icon: Truck },
-  { id: 'upi', label: 'UPI Payment', desc: 'Pay via UPI (GPay, PhonePe, Paytm)', icon: CreditCard },
-  { id: 'card', label: 'Credit/Debit Card', desc: 'Secure card payment', icon: CreditCard },
+  { id: 'upi', label: 'UPI Payment', desc: 'Pay via UPI (GPay, PhonePe, Paytm)', icon: Smartphone },
+];
+
+const INDIA_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
+  'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
+  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
 ];
 
 const STEPS = ['address', 'payment', 'review'];
@@ -53,6 +63,7 @@ export default function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [showQrModal, setShowQrModal] = useState(false);
   const [address, setAddress] = useState<AddressForm>({
     fullName: '', phone: '', line1: '', line2: '',
     city: '', state: '', pincode: '', notes: '',
@@ -280,8 +291,16 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <label className={`block text-xs ${sc} mb-1.5`}>State *</label>
-                    <input type="text" value={address.state} onChange={(e) => setAddress((p) => ({ ...p, state: e.target.value }))}
-                      className="w-full input-dark px-4 py-2.5 rounded-xl text-sm" placeholder="West Bengal" />
+                    <select
+                      value={address.state}
+                      onChange={(e) => setAddress((p) => ({ ...p, state: e.target.value }))}
+                      className="w-full input-dark px-4 py-2.5 rounded-xl text-sm appearance-none cursor-pointer"
+                    >
+                      <option value="">Select state</option>
+                      {INDIA_STATES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className={`block text-xs ${sc} mb-1.5`}>Pincode *</label>
@@ -335,8 +354,11 @@ export default function CheckoutPage() {
 
                 <div className="flex gap-3 mt-5">
                   <button onClick={() => setStep('address')} className="btn-outline-gold px-5 py-3 rounded-xl font-semibold text-sm">Back</button>
-                  <button onClick={() => setStep('review')} className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
-                    Review Order <ChevronRight size={14} />
+                  <button
+                    onClick={() => paymentMethod === 'upi' ? setShowQrModal(true) : setStep('review')}
+                    className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+                  >
+                    {paymentMethod === 'upi' ? 'Pay Now' : 'Review Order'} <ChevronRight size={14} />
                   </button>
                 </div>
               </motion.div>
@@ -557,6 +579,48 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* UPI QR Payment Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowQrModal(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`card-surface rounded-2xl border ${cardBorder} p-6 max-w-sm w-full`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-bold ${tc}`}>UPI Payment</h3>
+              <button onClick={() => setShowQrModal(false)} className={`${mc} hover:opacity-70 transition-opacity`}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="text-center">
+              <p className={`text-sm ${sc} mb-4`}>Scan the QR below to pay</p>
+              <div className={`inline-flex rounded-2xl overflow-hidden border-4 ${cardBorder} bg-white p-4 mb-4`}>
+                <img
+                  src="/WhatsApp_Image_2026-07-14_at_19.08.56.jpeg"
+                  alt="UPI QR Code"
+                  className="w-56 h-56 object-contain"
+                />
+              </div>
+              <div className={`rounded-xl ${innerBg} p-4 mb-4`}>
+                <div className={`text-xs ${mc} mb-1`}>Amount Payable</div>
+                <div className="text-2xl font-bold text-gold-400">₹{grandTotal.toLocaleString('en-IN')}</div>
+              </div>
+              <p className={`text-xs ${mc} mb-4`}>
+                Open any UPI app (GPay, PhonePe, Paytm) and scan this QR code. Enter the exact amount shown above to complete your payment.
+              </p>
+              <button
+                onClick={() => { setShowQrModal(false); setStep('review'); }}
+                className="w-full btn-gold py-3 rounded-xl font-semibold text-sm"
+              >
+                I've Paid — Continue
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

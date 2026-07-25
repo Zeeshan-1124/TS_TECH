@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { User, Package, LogOut, ChevronRight, ShoppingBag, Clock, CircleCheck as CheckCircle, Truck, Circle as XCircle, Gift, Coins, Heart } from 'lucide-react';
+import { User, Package, LogOut, ChevronRight, ShoppingBag, Clock, CircleCheck as CheckCircle, Truck, Circle as XCircle, Gift, Coins, Heart, Smartphone, CreditCard } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { ProductCard } from '@/components/ProductCard';
@@ -15,12 +15,17 @@ import type { Order, OrderItem, Product } from '@/lib/database.types';
 type Tab = 'orders' | 'wishlist' | 'loyalty' | 'referrals' | 'profile';
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  pending:   { icon: Clock,       color: 'text-yellow-400',  label: 'Pending' },
-  confirmed: { icon: CheckCircle, color: 'text-blue-400',    label: 'Confirmed' },
-  shipped:   { icon: Truck,       color: 'text-purple-400',  label: 'Shipped' },
-  delivered: { icon: CheckCircle, color: 'text-green-400',   label: 'Delivered' },
-  cancelled: { icon: XCircle,     color: 'text-red-400',     label: 'Cancelled' },
+  payment_pending:  { icon: Clock,       color: 'text-yellow-400',  label: 'Payment Pending' },
+  payment_confirmed:{ icon: CheckCircle, color: 'text-blue-400',    label: 'Payment Confirmed' },
+  processing:       { icon: Package,     color: 'text-blue-400',    label: 'Processing' },
+  packaging:        { icon: Package,     color: 'text-purple-400',  label: 'Packaging' },
+  shipped:          { icon: Truck,       color: 'text-purple-400',  label: 'Shipped' },
+  delivered:        { icon: CheckCircle, color: 'text-green-400',   label: 'Delivered' },
+  cancelled:        { icon: XCircle,     color: 'text-red-400',     label: 'Cancelled' },
 };
+
+const UPI_FLOW = ['payment_pending', 'payment_confirmed', 'processing', 'packaging', 'shipped', 'delivered'];
+const COD_FLOW = ['processing', 'packaging', 'shipped', 'delivered'];
 
 type OrderWithItems = Order & {
   order_items: (OrderItem & { products: { images: string[]; name: string } | null })[];
@@ -163,8 +168,10 @@ export default function AccountPage() {
             ) : (
               <div className="space-y-4">
                 {orders.map((order, i) => {
-                  const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
+                  const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.payment_pending;
                   const StatusIcon = status.icon;
+                  const flow = order.paymentMethod === 'upi' ? UPI_FLOW : COD_FLOW;
+                  const currentIndex = flow.indexOf(order.status);
                   return (
                     <motion.div
                       key={order.id}
@@ -214,10 +221,39 @@ export default function AccountPage() {
                           <span className="mx-2 text-silver-700">•</span>
                           <span className="text-sm font-semibold text-gold-400">₹{order.total.toLocaleString('en-IN')}</span>
                         </div>
-                        <div className={`text-xs ${mc}`}>
-                          {order.paymentMethod.toUpperCase()} · {order.paymentStatus}
+                        <div className={`text-xs ${mc} flex items-center gap-1`}>
+                          {order.paymentMethod === 'upi' ? <Smartphone size={11} /> : <CreditCard size={11} />}
+                          {order.paymentMethod.toUpperCase()}
                         </div>
                       </div>
+
+                      {order.status === 'cancelled' ? (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400 mt-3">
+                          <XCircle size={13} /> This order was cancelled
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1">
+                          {flow.map((stage, i) => {
+                            const done = i <= currentIndex;
+                            const active = i === currentIndex;
+                            const cfg = STATUS_CONFIG[stage];
+                            const StageIcon = cfg.icon;
+                            return (
+                              <div key={stage} className="flex items-center gap-1 flex-shrink-0">
+                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                                  active ? `${cfg.color} bg-white/5` : done ? `${cfg.color} opacity-90` : 'text-silver-700'
+                                }`}>
+                                  <StageIcon size={11} />
+                                  <span className="whitespace-nowrap">{cfg.label}</span>
+                                </div>
+                                {i < flow.length - 1 && (
+                                  <div className={`w-4 h-px ${i < currentIndex ? 'bg-gold-500/40' : 'bg-white/10'}`} />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}

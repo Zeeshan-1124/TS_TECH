@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.create({
       data: {
-        orderNumber, userId: user.id, status: 'confirmed',
+        orderNumber, userId: user.id,
+        status: paymentMethod === 'upi' ? 'payment_pending' : 'processing',
         subtotal, shippingFee, total, pointsRedeemed, loyaltyDiscount,
         shippingFullName, shippingPhone, shippingLine1, shippingLine2, shippingCity, shippingState, shippingPincode,
         paymentMethod, notes,
@@ -62,6 +63,26 @@ export async function POST(req: NextRequest) {
     await refreshLoyalty(user.id);
 
     return NextResponse.json({ order });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user?.isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+    const { orderNumber, status } = await req.json();
+    const order = await prisma.order.findFirst({ where: { orderNumber }, select: { id: true } });
+    if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { status },
+    });
+
+    return NextResponse.json({ order: updated });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal server error' }, { status: 500 });
   }

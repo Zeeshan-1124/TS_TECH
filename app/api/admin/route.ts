@@ -12,7 +12,7 @@ export async function GET() {
       prisma.order.count(),
       prisma.contactSubmission.count(),
       prisma.order.findMany({ where: { status: { not: 'cancelled' } }, select: { total: true } }),
-      prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { orderNumber: true, total: true, status: true, createdAt: true } }),
+      prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { orderNumber: true, total: true, status: true, paymentMethod: true, createdAt: true } }),
       prisma.product.findMany({ where: { isDailyDeal: true, isActive: true }, orderBy: { updatedAt: 'desc' } }),
       prisma.product.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
     ]);

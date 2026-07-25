@@ -53,13 +53,22 @@ interface OrderDetails {
   }[];
 }
 
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
-  pending: { icon: Clock, color: 'text-yellow-400' },
-  confirmed: { icon: CheckCircle, color: 'text-blue-400' },
-  shipped: { icon: Truck, color: 'text-purple-400' },
-  delivered: { icon: CheckCircle, color: 'text-green-400' },
-  cancelled: { icon: XCircle, color: 'text-red-400' },
+const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
+  payment_pending: { icon: Clock,       color: 'text-yellow-400',  label: 'Payment Pending' },
+  payment_confirmed:{ icon: CheckCircle, color: 'text-blue-400',    label: 'Payment Confirmed' },
+  processing:    { icon: Package,     color: 'text-blue-400',    label: 'Processing' },
+  packaging:     { icon: Package,     color: 'text-purple-400',  label: 'Packaging' },
+  shipped:       { icon: Truck,       color: 'text-purple-400',  label: 'Shipped' },
+  delivered:     { icon: CheckCircle, color: 'text-green-400',   label: 'Delivered' },
+  cancelled:     { icon: XCircle,     color: 'text-red-400',     label: 'Cancelled' },
 };
+
+const UPI_STATUS_FLOW = ['payment_pending', 'payment_confirmed', 'processing', 'packaging', 'shipped', 'delivered'];
+const COD_STATUS_FLOW = ['processing', 'packaging', 'shipped', 'delivered'];
+const EXTRA_STATUSES = ['cancelled'];
+
+const getStatusFlow = (paymentMethod: string) =>
+  paymentMethod === 'upi' ? UPI_STATUS_FLOW : COD_STATUS_FLOW;
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ totalProducts: 0, totalOrders: 0, totalMessages: 0, revenue: 0 });
@@ -103,6 +112,23 @@ export default function AdminDashboardPage() {
     const data = await res.json();
     if (data.order) setSelectedOrder(data.order as OrderDetails);
     setOrderModalLoading(false);
+  };
+
+  const handleStatusChange = async (orderNumber: string, newStatus: string) => {
+    setRecentOrders((prev) => prev.map((o) => o.orderNumber === orderNumber ? { ...o, status: newStatus } : o));
+    if (selectedOrder?.orderNumber === orderNumber) setSelectedOrder({ ...selectedOrder, status: newStatus });
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderNumber, status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update status');
+      toast.success('Status updated', { description: `Order ${orderNumber} → ${STATUS_CONFIG[newStatus]?.label ?? newStatus}` });
+    } catch (err) {
+      toast.error('Could not update status', { description: err instanceof Error ? err.message : 'Unknown error' });
+    }
   };
 
   const handleDeleteOrder = async () => {
@@ -277,23 +303,36 @@ export default function AdminDashboardPage() {
         ) : (
           <div className="space-y-2">
             {recentOrders.map((order) => {
-              const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
+              const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.payment_pending;
               const StatusIcon = status.icon;
+              const flow = getStatusFlow(order.paymentMethod ?? 'cod');
               return (
-                <div key={order.orderNumber} className="flex items-center justify-between p-3 bg-white/3 rounded-xl border border-white/5">
-                  <div>
-                    <div className="text-sm font-semibold text-white">{order.orderNumber}</div>
+                <div key={order.orderNumber} className="flex items-center justify-between p-3 bg-white/3 rounded-xl border border-white/5 gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">{order.orderNumber}</div>
                     <div className="text-xs text-silver-500">
                       {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-right hidden sm:block">
                       <div className="text-sm font-semibold text-gold-400">₹{order.total.toLocaleString('en-IN')}</div>
-                      <div className={`text-xs font-medium capitalize flex items-center gap-1 justify-end ${status.color}`}>
-                        <StatusIcon size={11} /> {order.status}
+                      <div className={`text-xs font-medium flex items-center gap-1 justify-end ${status.color}`}>
+                        <StatusIcon size={11} /> {status.label}
                       </div>
                     </div>
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.orderNumber, e.target.value)}
+                      className="bg-dark-400 border border-white/10 text-white text-xs rounded-lg px-2 py-1.5 cursor-pointer hover:border-gold-500/40 transition-colors capitalize"
+                    >
+                      {flow.map((s) => (
+                        <option key={s} value={s}>{STATUS_CONFIG[s]?.label ?? s}</option>
+                      ))}
+                      {EXTRA_STATUSES.map((s) => (
+                        <option key={s} value={s}>{STATUS_CONFIG[s]?.label ?? s}</option>
+                      ))}
+                    </select>
                     <button
                       onClick={() => viewOrderDetails(order.orderNumber)}
                       className="text-xs text-silver-500 hover:text-gold-400 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
@@ -374,13 +413,24 @@ export default function AdminDashboardPage() {
               {/* Modal Body */}
               <div className="p-5 space-y-5">
                 {/* Status & Date */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="text-sm text-silver-500">
                     {new Date(selectedOrder.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div className={`text-xs font-semibold capitalize flex items-center gap-1 ${STATUS_CONFIG[selectedOrder.status]?.color ?? 'text-silver-400'}`}>
-                    {(() => { const Icon = STATUS_CONFIG[selectedOrder.status]?.icon ?? Clock; return <Icon size={12} />; })()}
-                    {selectedOrder.status}
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-silver-500">Status:</label>
+                    <select
+                      value={selectedOrder.status}
+                      onChange={(e) => handleStatusChange(selectedOrder.orderNumber, e.target.value)}
+                      className="bg-dark-400 border border-white/10 text-white text-xs rounded-lg px-2.5 py-1.5 cursor-pointer hover:border-gold-500/40 transition-colors"
+                    >
+                      {getStatusFlow(selectedOrder.paymentMethod).map((s) => (
+                        <option key={s} value={s}>{STATUS_CONFIG[s]?.label ?? s}</option>
+                      ))}
+                      {EXTRA_STATUSES.map((s) => (
+                        <option key={s} value={s}>{STATUS_CONFIG[s]?.label ?? s}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

@@ -147,13 +147,16 @@ export default function CheckoutPage() {
           shippingPincode: address.pincode,
           paymentMethod,
           notes: address.notes || null,
-          items: items.map((item) => ({
-            productId: item.product.id,
-            productName: item.product.name,
-            productImage: (item.product.images as string[])?.[0] ?? null,
-            quantity: item.quantity,
-            unitPrice: item.product.price,
-          })),
+          items: items.map((item) => {
+            const caseSuffix = item.caseBrand && item.caseModel ? ` — ${item.caseBrand} ${item.caseModel}` : '';
+            return {
+              productId: item.product.id,
+              productName: `${item.product.name}${caseSuffix}`,
+              productImage: (item.product.images as string[])?.[0] ?? null,
+              quantity: item.quantity,
+              unitPrice: item.product.price,
+            };
+          }),
         }),
       });
 

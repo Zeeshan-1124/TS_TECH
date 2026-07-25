@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ShoppingCart, Shield, Truck, RotateCcw,
-  Star, Plus, Minus, Heart, ChevronRight, Package,
-  Zap, Box, Check, Pencil, Trash2,
+  Star, Plus, Minus, Heart, ChevronRight, ChevronDown, Package,
+  Zap, Box, Check, Pencil, Trash2, Smartphone,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -15,6 +15,7 @@ import { useRecentlyViewed } from '@/context/RecentlyViewedContext';
 import { useAuth } from '@/context/AuthContext';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
+import { PHONE_CASE_BRANDS, PHONE_CASE_BRAND_NAMES, isPhoneCaseProduct } from '@/lib/phoneCaseModels';
 import type { Product, Category, Review, ColorVariant } from '@/lib/database.types';
 import { toast } from 'sonner';
 
@@ -34,6 +35,8 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [activeColor, setActiveColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selectedCaseBrand, setSelectedCaseBrand] = useState('');
+  const [selectedCaseModel, setSelectedCaseModel] = useState('');
   const [adding, setAdding] = useState(false);
   const [buying, setBuying] = useState(false);
 
@@ -81,16 +84,20 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
+    if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setAdding(true);
-    for (let i = 0; i < quantity; i++) await addToCart(product);
+    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel });
     setAdding(false);
-    toast.success('Added to cart!', { description: `${quantity} × ${product.name}` });
+    toast.success('Added to cart!', { description: `${quantity} × ${product.name}${selectedCaseModel ? ` (${selectedCaseBrand} ${selectedCaseModel})` : ''}` });
   };
 
   const handleBuyNow = async () => {
     if (!product) return;
+    if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
+    if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setBuying(true);
-    for (let i = 0; i < quantity; i++) await addToCart(product);
+    for (let i = 0; i < quantity; i++) await addToCart(product, 1, { caseBrand: selectedCaseBrand, caseModel: selectedCaseModel });
     setBuying(false);
     router.push('/checkout');
   };
@@ -163,6 +170,8 @@ export default function ProductDetailPage() {
   };
 
   const colorVariants = ((product?.colorVariants as ColorVariant[] | null) ?? []).filter((v) => v.color && v.images.length > 0);
+  const isPhoneCase = product ? isPhoneCaseProduct(product) : false;
+  const availableModels = selectedCaseBrand ? PHONE_CASE_BRANDS[selectedCaseBrand] ?? [] : [];
   const generalImages = (product?.images ?? []) as string[];
   const currentImages = colorVariants.length > 0 && colorVariants[activeColor]
     ? colorVariants[activeColor].images
@@ -307,6 +316,56 @@ export default function ProductDetailPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Phone Case Brand & Model Selector */}
+            {isPhoneCase && (
+              <div className="mb-6 p-4 rounded-xl border border-gold-500/20 bg-gold-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone size={16} className="text-gold-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-white">Select Your Phone</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-silver-400 mb-1.5">Brand *</label>
+                    <div className="relative">
+                      <select
+                        value={selectedCaseBrand}
+                        onChange={(e) => { setSelectedCaseBrand(e.target.value); setSelectedCaseModel(''); }}
+                        className="w-full input-dark appearance-none px-4 py-2.5 rounded-xl text-sm pr-10 cursor-pointer"
+                      >
+                        <option value="">Choose brand</option>
+                        {PHONE_CASE_BRAND_NAMES.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-silver-500 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-silver-400 mb-1.5">Model *</label>
+                    <div className="relative">
+                      <select
+                        value={selectedCaseModel}
+                        onChange={(e) => setSelectedCaseModel(e.target.value)}
+                        disabled={!selectedCaseBrand}
+                        className="w-full input-dark appearance-none px-4 py-2.5 rounded-xl text-sm pr-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">{selectedCaseBrand ? 'Choose model' : 'Select brand first'}</option>
+                        {availableModels.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-silver-500 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+                {selectedCaseBrand && selectedCaseModel && (
+                  <div className="mt-3 text-xs text-gold-400 flex items-center gap-1.5">
+                    <Check size={12} /> Case for {selectedCaseBrand} {selectedCaseModel}
+                  </div>
+                )}
               </div>
             )}
 

@@ -7,6 +7,8 @@ import type { Product } from '@/lib/database.types';
 export interface LocalCartItem {
   product: Product;
   quantity: number;
+  caseBrand?: string | null;
+  caseModel?: string | null;
 }
 
 interface CartContextValue {
@@ -14,10 +16,14 @@ interface CartContextValue {
   count: number;
   total: number;
   loading: boolean;
-  addToCart: (product: Product, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (product: Product, quantity?: number, options?: { caseBrand?: string; caseModel?: string }) => Promise<void>;
+  removeFromCart: (productId: string, caseBrand?: string | null, caseModel?: string | null) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null) => Promise<void>;
   clearCart: () => Promise<void>;
+}
+
+export function cartItemKey(productId: string, caseBrand?: string | null, caseModel?: string | null): string {
+  return caseBrand || caseModel ? `${productId}__${caseBrand ?? ''}__${caseModel ?? ''}` : productId;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -69,12 +75,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchServerCart]);
 
-  const addToCart = async (product: Product, quantity = 1) => {
+  const addToCart = async (product: Product, quantity = 1, options?: { caseBrand?: string; caseModel?: string }) => {
+    const caseBrand = options?.caseBrand ?? null;
+    const caseModel = options?.caseModel ?? null;
+    const key = cartItemKey(product.id, caseBrand, caseModel);
     setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
+      const existing = prev.find((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key);
       const next = existing
-        ? prev.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + quantity } : i)
-        : [...prev, { product, quantity }];
+        ? prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key ? { ...i, quantity: i.quantity + quantity } : i)
+        : [...prev, { product, quantity, caseBrand, caseModel }];
       saveLocal(next);
       return next;
     });
@@ -88,9 +97,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (productId: string, caseBrand?: string | null, caseModel?: string | null) => {
+    const key = cartItemKey(productId, caseBrand, caseModel);
     setItems((prev) => {
-      const next = prev.filter((i) => i.product.id !== productId);
+      const next = prev.filter((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) !== key);
       saveLocal(next);
       return next;
     });
@@ -99,10 +109,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateQuantity = async (productId: string, quantity: number) => {
-    if (quantity <= 0) { await removeFromCart(productId); return; }
+  const updateQuantity = async (productId: string, quantity: number, caseBrand?: string | null, caseModel?: string | null) => {
+    if (quantity <= 0) { await removeFromCart(productId, caseBrand, caseModel); return; }
+    const key = cartItemKey(productId, caseBrand, caseModel);
     setItems((prev) => {
-      const next = prev.map((i) => i.product.id === productId ? { ...i, quantity } : i);
+      const next = prev.map((i) => cartItemKey(i.product.id, i.caseBrand, i.caseModel) === key ? { ...i, quantity } : i);
       saveLocal(next);
       return next;
     });

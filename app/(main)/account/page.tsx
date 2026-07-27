@@ -28,7 +28,7 @@ const UPI_FLOW = ['payment_pending', 'payment_confirmed', 'processing', 'packagi
 const COD_FLOW = ['processing', 'packaging', 'shipped', 'delivered'];
 
 type OrderWithItems = Order & {
-  order_items: (OrderItem & { products: { images: string[]; name: string } | null })[];
+  orderItems: (OrderItem & { product: { images: string[]; name: string } | null })[];
 };
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -194,11 +194,11 @@ export default function AccountPage() {
                       </div>
 
                       <div className="flex gap-2 mb-4 flex-wrap">
-                        {order.order_items.slice(0, 4).map((item) => (
+                        {(order.orderItems ?? []).slice(0, 4).map((item) => (
                           <div key={item.id} className="relative">
                             <div className={`w-12 h-12 rounded-lg overflow-hidden border ${isDark ? 'bg-dark-300 border-white/5' : 'bg-gray-100 border-gray-200'}`}>
-                              {item.products?.images?.[0] && (
-                                <img src={item.products.images[0]} alt={item.productName} className="w-full h-full object-cover" />
+                              {item.product?.images?.[0] && (
+                                <img src={item.product.images[0]} alt={item.productName} className="w-full h-full object-cover" />
                               )}
                             </div>
                             {item.quantity > 1 && (
@@ -208,16 +208,16 @@ export default function AccountPage() {
                             )}
                           </div>
                         ))}
-                        {order.order_items.length > 4 && (
+                        {(order.orderItems ?? []).length > 4 && (
                           <div className={`w-12 h-12 rounded-lg border flex items-center justify-center text-xs ${mc} ${isDark ? 'bg-dark-300 border-white/5' : 'bg-gray-100 border-gray-200'}`}>
-                            +{order.order_items.length - 4}
+                            +{(order.orderItems ?? []).length - 4}
                           </div>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className={`text-sm ${mc}`}>{order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}</span>
+                          <span className={`text-sm ${mc}`}>{(order.orderItems ?? []).length} item{(order.orderItems ?? []).length !== 1 ? 's' : ''}</span>
                           <span className="mx-2 text-silver-700">•</span>
                           <span className="text-sm font-semibold text-gold-400">₹{order.total.toLocaleString('en-IN')}</span>
                         </div>

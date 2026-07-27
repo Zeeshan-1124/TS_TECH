@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'sonner';
 import type { Address } from '@/lib/database.types';
+import { QRCodeCanvas } from 'qrcode.react';
 
 type Step = 'address' | 'payment' | 'review';
 
@@ -64,6 +65,7 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [showQrModal, setShowQrModal] = useState(false);
+  const [upiPaid, setUpiPaid] = useState(false);
   const [address, setAddress] = useState<AddressForm>({
     fullName: '', phone: '', line1: '', line2: '',
     city: '', state: '', pincode: '', notes: '',
@@ -294,6 +296,7 @@ export default function CheckoutPage() {
                     <select
                       value={address.state}
                       onChange={(e) => setAddress((p) => ({ ...p, state: e.target.value }))}
+                      style={{ colorScheme: isDark ? 'dark' : 'light' }}
                       className="w-full input-dark px-4 py-2.5 rounded-xl text-sm appearance-none cursor-pointer"
                     >
                       <option value="">Select state</option>
@@ -355,10 +358,10 @@ export default function CheckoutPage() {
                 <div className="flex gap-3 mt-5">
                   <button onClick={() => setStep('address')} className="btn-outline-gold px-5 py-3 rounded-xl font-semibold text-sm">Back</button>
                   <button
-                    onClick={() => paymentMethod === 'upi' ? setShowQrModal(true) : setStep('review')}
+                    onClick={() => setStep('review')}
                     className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
                   >
-                    {paymentMethod === 'upi' ? 'Pay Now' : 'Review Order'} <ChevronRight size={14} />
+                    Review Order <ChevronRight size={14} />
                   </button>
                 </div>
               </motion.div>
@@ -416,13 +419,22 @@ export default function CheckoutPage() {
 
                 <div className="flex gap-3">
                   <button onClick={() => setStep('payment')} className="btn-outline-gold px-5 py-3 rounded-xl font-semibold text-sm">Back</button>
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={placing}
-                    className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {placing ? 'Placing Order...' : 'Place Order'}
-                  </button>
+                  {paymentMethod === 'upi' && !upiPaid ? (
+                    <button
+                      onClick={() => setShowQrModal(true)}
+                      className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+                    >
+                      <Smartphone size={14} /> Pay with UPI <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handlePlaceOrder}
+                      disabled={placing}
+                      className="flex-1 btn-gold py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {placing ? 'Placing Order...' : 'Place Order'}
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -580,44 +592,52 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* UPI QR Payment Modal */}
+      {/* UPI QR Payment Modal — shown at review step with locked amount */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowQrModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => !placing && setShowQrModal(false)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`card-surface rounded-2xl border ${cardBorder} p-6 max-w-sm w-full`}
+            className={`card-surface rounded-2xl border ${cardBorder} p-6 max-w-md w-full`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-bold ${tc}`}>UPI Payment</h3>
-              <button onClick={() => setShowQrModal(false)} className={`${mc} hover:opacity-70 transition-opacity`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-lg font-bold ${tc}`}>UPI Payment</h3>
+                <p className={`text-xs ${mc}`}>Scan to pay with any UPI app</p>
+              </div>
+              <button onClick={() => !placing && setShowQrModal(false)} className={`${mc} hover:opacity-70 transition-opacity`}>
                 <X size={18} />
               </button>
             </div>
-            <div className="text-center">
-              <p className={`text-sm ${sc} mb-4`}>Scan the QR below to pay</p>
-              <div className={`inline-flex rounded-2xl overflow-hidden border-4 ${cardBorder} bg-white p-4 mb-4`}>
-                <img
-                  src="/WhatsApp_Image_2026-07-14_at_19.08.56.jpeg"
-                  alt="UPI QR Code"
-                  className="w-56 h-56 object-contain"
+
+            {/* Big QR — white background for scannability, minimal padding */}
+            <div className="flex justify-center mb-5">
+              <div className="bg-white rounded-xl p-3">
+                <QRCodeCanvas
+                  value={`upi://pay?pa=9681076990@axl&pn=IMRAN%20ALI%20WARSI&am=${grandTotal}&cu=INR`}
+                  size={300}
+                  level="M"
+                  marginSize={0}
                 />
               </div>
-              <div className={`rounded-xl ${innerBg} p-4 mb-4`}>
-                <div className={`text-xs ${mc} mb-1`}>Amount Payable</div>
-                <div className="text-2xl font-bold text-gold-400">₹{grandTotal.toLocaleString('en-IN')}</div>
-              </div>
-              <p className={`text-xs ${mc} mb-4`}>
-                Open any UPI app (GPay, PhonePe, Paytm) and scan this QR code. Enter the exact amount shown above to complete your payment.
-              </p>
-              <button
-                onClick={() => { setShowQrModal(false); setStep('review'); }}
-                className="w-full btn-gold py-3 rounded-xl font-semibold text-sm"
-              >
-                I've Paid — Continue
-              </button>
             </div>
+
+            <div className={`rounded-xl ${innerBg} p-4 mb-4 text-center`}>
+              <div className={`text-xs ${mc} mb-1`}>Amount Payable (locked)</div>
+              <div className="text-3xl font-bold text-gold-400">₹{grandTotal.toLocaleString('en-IN')}</div>
+              <div className={`text-[10px] ${mc} mt-1`}>This amount is pre-filled in your UPI app and cannot be changed</div>
+            </div>
+
+            <p className={`text-xs ${mc} mb-4 text-center`}>
+              Open GPay, PhonePe, or Paytm and scan the QR above. The exact amount will appear automatically.
+            </p>
+            <button
+              onClick={() => { setUpiPaid(true); setShowQrModal(false); }}
+              className="w-full btn-gold py-3 rounded-xl font-semibold text-sm"
+            >
+              I've Paid — Continue
+            </button>
           </motion.div>
         </div>
       )}

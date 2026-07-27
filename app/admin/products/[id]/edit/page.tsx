@@ -211,7 +211,7 @@ export default function EditProductPage() {
           </Field>
           <div className="grid sm:grid-cols-3 gap-4">
             <Field label="Category">
-              <select value={form.categoryId} onChange={set('categoryId')} className="w-full input-dark px-4 py-3 rounded-xl text-sm">
+              <select value={form.categoryId} onChange={set('categoryId')} style={{ colorScheme: 'dark' }} className="w-full input-dark px-4 py-3 rounded-xl text-sm appearance-none cursor-pointer">
                 <option value="">No category</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>

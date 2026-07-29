@@ -74,34 +74,6 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   return user ? { ...user, createdAt: user.createdAt.toISOString() } : null;
 }
 
-export async function signUp(email: string, password: string, fullName: string) {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) throw new Error('An account with this email already exists');
-
-  const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
-    data: { email, passwordHash, fullName },
-  });
-
-  const token = await createToken(user.id);
-  await setAuthCookie(token);
-
-  return { id: user.id, email: user.email, fullName: user.fullName, isAdmin: user.isAdmin, createdAt: user.createdAt.toISOString() };
-}
-
-export async function signIn(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new Error('Invalid email or password');
-
-  const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) throw new Error('Invalid email or password');
-
-  const token = await createToken(user.id);
-  await setAuthCookie(token);
-
-  return { id: user.id, email: user.email, fullName: user.fullName, isAdmin: user.isAdmin, createdAt: user.createdAt.toISOString() };
-}
-
 export async function signOut() {
   await clearAuthCookie();
 }

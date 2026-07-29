@@ -6,8 +6,8 @@ import type { AuthUser } from '@/lib/database.types';
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string, referralCode?: string) => Promise<{ error: string | null }>;
+  sendOtp: (email: string, password: string, fullName: string | undefined, mode: 'signin' | 'signup') => Promise<{ error: string | null }>;
+  verifyOtp: (email: string, password: string, fullName: string | undefined, otp: string, mode: 'signin' | 'signup') => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -37,31 +37,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  const signIn = async (email: string, password: string) => {
+  const sendOtp = async (
+    email: string,
+    password: string,
+    fullName: string | undefined,
+    mode: 'signin' | 'signup',
+  ) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, fullName, mode }),
       });
       const data = await res.json();
-      if (!res.ok) return { error: data.error ?? 'Sign in failed' };
-      setUser(data.user);
+      if (!res.ok) return { error: data.error ?? 'Failed to send code' };
       return { error: null };
     } catch {
       return { error: 'Network error. Please try again.' };
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, _referralCode?: string) => {
+  const verifyOtp = async (
+    email: string,
+    password: string,
+    fullName: string | undefined,
+    otp: string,
+    mode: 'signin' | 'signup',
+  ) => {
     try {
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify({ email, password, fullName, otp, mode }),
       });
       const data = await res.json();
-      if (!res.ok) return { error: data.error ?? 'Sign up failed' };
+      if (!res.ok) return { error: data.error ?? 'Verification failed' };
       setUser(data.user);
       return { error: null };
     } catch {
@@ -79,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, sendOtp, verifyOtp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

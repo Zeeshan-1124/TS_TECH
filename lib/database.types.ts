@@ -140,38 +140,6 @@ export interface Wishlist {
   createdAt: string;
 }
 
-export interface ReferralCode {
-  id: string;
-  userId: string;
-  code: string;
-  rewardPerReferral: number;
-  referredReward: number;
-  usesCount: number;
-  isActive: boolean;
-  createdAt: string;
-}
-
-export interface ReferralUse {
-  id: string;
-  referralCodeId: string;
-  referredUserId: string;
-  status: string;
-  orderId: string | null;
-  referrerReward: number | null;
-  referredDiscount: number | null;
-  createdAt: string;
-}
-
-export interface ReferralCredit {
-  id: string;
-  userId: string;
-  amount: number;
-  description: string;
-  isUsed: boolean;
-  orderId: string | null;
-  createdAt: string;
-}
-
 export interface LoyaltyMembership {
   userId: string;
   tier: string;

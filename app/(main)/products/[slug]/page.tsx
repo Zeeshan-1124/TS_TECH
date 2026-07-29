@@ -84,6 +84,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!user) { router.push(`/login?redirect=/products/${slug}`); return; }
     if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
     if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setAdding(true);
@@ -95,6 +96,7 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = async () => {
     if (!product) return;
+    if (!user) { router.push(`/login?redirect=/products/${slug}`); return; }
     if (isPhoneCase && !selectedCaseBrand) { toast.error('Please select a phone brand'); return; }
     if (isPhoneCase && !selectedCaseModel) { toast.error('Please select a phone model'); return; }
     setBuying(true);
@@ -598,7 +600,7 @@ export default function ProductDetailPage() {
           ) : (
             <div className="card-surface rounded-2xl border border-white/5 p-6 mb-6 text-center">
               <p className="text-sm text-silver-500 mb-3">Please sign in to write a review</p>
-              <Link href="/login?redirect=/products/[slug]" className="btn-outline-gold inline-flex px-4 py-2 rounded-lg text-sm">
+              <Link href={`/login?redirect=/products/${slug}`} className="btn-outline-gold inline-flex px-4 py-2 rounded-lg text-sm">
                 Sign In
               </Link>
             </div>

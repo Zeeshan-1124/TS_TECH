@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Heart, Tag, Zap, Package } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useAuth } from '@/context/AuthContext';
 import type { Product, ColorVariant } from '@/lib/database.types';
 import { toast } from 'sonner';
 
@@ -19,6 +20,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const router = useRouter();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { user } = useAuth();
   const [adding, setAdding] = useState(false);
   const [buying, setBuying] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -40,6 +42,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (product.stockQuantity === 0) return;
+    if (!user) { router.push(`/login?redirect=/products/${product.slug}`); return; }
     setAdding(true);
     await addToCart(product);
     setAdding(false);
@@ -50,6 +53,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (product.stockQuantity === 0) return;
+    if (!user) { router.push(`/login?redirect=/products/${product.slug}`); return; }
     setBuying(true);
     await addToCart(product);
     setBuying(false);
